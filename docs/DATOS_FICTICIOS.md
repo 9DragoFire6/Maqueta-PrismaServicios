@@ -3,7 +3,7 @@
 Este documento define el negocio inventado que van a usar los datos de ejemplo
 en todas las fases siguientes (reemplaza a `generar_datos_prueba_operativos.py`
 / `generar_datos_prueba_facturacion.py` del original). Ningún nombre, cifra ni
-situación de acá corresponde a Fam&Co.
+situación de acá corresponde al proyecto original.
 
 El comando de management real (`generar_datos_demo`) no se puede escribir
 todavía porque los modelos (`Cliente`, `Servicio`, `Contrato`, `Empleado`,

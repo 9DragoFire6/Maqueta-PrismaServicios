@@ -28,22 +28,58 @@ class Command(BaseCommand):
       caso real conviene agregar una clave de deduplicacion (por ejemplo,
       un numero de folio externo) antes de cargar datos de produccion.
 
-    Uso: python manage.py importar_csv [--solo clientes|ingresos]
+    Uso: python manage.py importar_csv [--solo clientes|catalogo|ingresos]
     Por defecto usa los CSV de ejemplo en docs/importacion_ejemplo/.
+
+    El catalogo (Servicio/Empleado) no viene de un CSV -- son los mismos
+    nombres/codigos fijados en docs/DATOS_FICTICIOS.md, sembrados de forma
+    idempotente para que los ingresos de ejemplo tengan a quien engancharse
+    en una base recien migrada.
     """
 
-    help = 'Importa clientes (idempotente) e ingresos historicos (no idempotente) desde CSV.'
+    help = 'Importa clientes y catalogo (idempotente) + ingresos historicos (no idempotente) desde CSV.'
+
+    SERVICIOS = [
+        dict(codigo='LIMP-STD', nombre='Limpieza estándar', categoria='estandar',
+             tarifa_cliente=Decimal('15'), compensacion_tipo='por_hora', compensacion_valor=Decimal('10')),
+        dict(codigo='LIMP-NOC', nombre='Limpieza industrial nocturna', categoria='premium',
+             tarifa_cliente=Decimal('20'), compensacion_tipo='porcentaje_base', compensacion_valor=Decimal('100'),
+             cruza_medianoche=True),
+        dict(codigo='MANT-TEC', nombre='Mantenimiento técnico', categoria='estandar',
+             tarifa_cliente=Decimal('18'), compensacion_tipo='por_hora', compensacion_valor=Decimal('12')),
+    ]
+    EMPLEADOS = [
+        dict(nombre='TEST-Diego', categoria='estandar'),
+        dict(nombre='TEST-Sofia', categoria='estandar'),
+        dict(nombre='TEST-Marta', categoria='estandar'),
+        dict(nombre='TEST-Julia', categoria='premium'),
+    ]
 
     def add_arguments(self, parser):
-        parser.add_argument('--solo', choices=['clientes', 'ingresos'], default=None)
+        parser.add_argument('--solo', choices=['clientes', 'catalogo', 'ingresos'], default=None)
         parser.add_argument('--clientes-csv', default=str(EJEMPLOS_DIR / 'clientes.csv'))
         parser.add_argument('--ingresos-csv', default=str(EJEMPLOS_DIR / 'ingresos_historicos.csv'))
 
     def handle(self, *args, **options):
         if options['solo'] in (None, 'clientes'):
             self.importar_clientes(options['clientes_csv'])
+        if options['solo'] in (None, 'catalogo'):
+            self.importar_catalogo()
         if options['solo'] in (None, 'ingresos'):
             self.importar_ingresos_historicos(options['ingresos_csv'])
+
+    def importar_catalogo(self):
+        """Idempotente: get_or_create por codigo/nombre. Ver docs/DATOS_FICTICIOS.md."""
+        creados = 0
+        for original in self.SERVICIOS:
+            datos = dict(original)  # copia: no mutar la constante de clase entre corridas
+            _, creado = Servicio.objects.get_or_create(codigo=datos.pop('codigo'), defaults=datos)
+            creados += int(creado)
+        for original in self.EMPLEADOS:
+            datos = dict(original)
+            _, creado = Empleado.objects.get_or_create(nombre=datos.pop('nombre'), defaults=datos)
+            creados += int(creado)
+        self.stdout.write(f'Catálogo (servicios + empleados): {creados} creados de {len(self.SERVICIOS) + len(self.EMPLEADOS)} (idempotente).')
 
     def importar_clientes(self, ruta):
         """Idempotente: get_or_create por nombre_contacto."""

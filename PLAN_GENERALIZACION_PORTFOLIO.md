@@ -1,4 +1,4 @@
-# Plan: generalizar el sistema Fam&Co para portfolio propio
+# Plan: generalizar un sistema real para portfolio propio
 
 ## Objetivo
 
@@ -6,9 +6,10 @@ Extraer la arquitectura técnica de este proyecto hacia un repo nuevo, propiedad
 de Kevin, generalizada a un dominio genérico de **"gestión de clientes + servicios
 programados + personal + facturación"** — útil para mostrar el trabajo y reutilizable en
 cualquier negocio que opere por proyectos/servicios (no solo cuidado de personas). Ningún
-dato real, nombre real, ni detalle específico del rubro de Fam&Co debe quedar visible.
+dato real, nombre real, ni detalle específico del rubro del proyecto original debe quedar
+visible.
 
-Este plan **no toca el repo `byfamco`**. Todo el trabajo ocurre en un repo nuevo aparte.
+Este plan **no toca el repo original**. Todo el trabajo ocurre en un repo nuevo aparte.
 Nada de esto se ejecuta sin que Kevin revise y apruebe cada fase.
 
 **Alcance de ejecución: solo local.** La versión generalizada no se despliega (no hay
@@ -20,14 +21,14 @@ correrlo local" (backend con `runserver`, frontend con `vite dev`).
 ## Cómo se ejecuta este plan (logística)
 
 - **Chat nuevo, separado de este.** Esta conversación tiene harto contexto operativo real
-  de Fam&Co (bugs, nombres, decisiones de negocio) que no debería filtrarse ni por
-  accidente a los comentarios o el README del repo genérico. Un chat nuevo parte limpio.
-- **Esa sesión nueva necesita acceso a dos carpetas:** la carpeta `byfamco` (como
+  del proyecto original (bugs, nombres, decisiones de negocio) que no debería filtrarse ni
+  por accidente a los comentarios o el README del repo genérico. Un chat nuevo parte limpio.
+- **Esa sesión nueva necesita acceso a dos carpetas:** la carpeta del repo original (como
   referencia de solo lectura — nunca se escribe ahí) y una carpeta nueva, vacía, que sea el
   repo del proyecto genérico (ahí se escribe todo). Si la app no permite conectar dos
   carpetas a la misma sesión, el plan B es que yo arme la primera copia de trabajo acá
-  mismo (ya tengo acceso a `byfamco` en esta sesión) y la dejes lista para que la muevas a
-  la carpeta nueva antes de abrir el otro chat.
+  mismo (ya tengo acceso al repo original en esta sesión) y la dejes lista para que la
+  muevas a la carpeta nueva antes de abrir el otro chat.
 - **No recomiendo copiar el repo completo tal cual y depurar encima.** Arrastraría el
   historial de git, las migraciones de Django, `mediafiles/`, `node_modules/` y cualquier
   `.env` con secretos reales — nada de eso debería existir en el repo genérico. Mejor
@@ -44,17 +45,18 @@ correrlo local" (backend con `runserver`, frontend con `vite dev`).
   reemplaza por una versión configurable, no solo se renombra.
 - **No perder funcionalidad.** Cada fase se verifica contra la lógica original antes de
   pasar a la siguiente — la meta es que el sistema genérico siga haciendo lo mismo
-  (agendar, facturar, controlar ausencias, etc.), solo que sin el ropaje de Fam&Co.
+  (agendar, facturar, controlar ausencias, etc.), solo que sin el ropaje del proyecto
+  original.
 - **Fases chicas y revisables.** Cada fase es un módulo o grupo de módulos acotado. Se
   para a revisar contigo al final de cada una antes de seguir — así si algo no convence, se
   corrige ahí mismo y no hay que deshacer trabajo de fases posteriores.
 - **Datos ficticios desde el principio.** Antes de generalizar el primer modelo, se arma un
   comando de datos de ejemplo con nombres/empresas inventados, para poder probar cada fase
-  sin tocar nunca datos reales de Fam&Co.
+  sin tocar nunca datos reales del proyecto original.
 
 ## Glosario de renombres (guía para todas las fases)
 
-| Original (Fam&Co) | Generalizado | Nota |
+| Original | Generalizado | Nota |
 |---|---|---|
 | `Familia` | `Cliente` | Entidad que contrata servicios |
 | `Bebe` | *(se elimina)* | Demasiado específico de cuidado infantil — es el campo que más delata el rubro. No se generaliza, se saca del todo. |
@@ -75,7 +77,7 @@ correrlo local" (backend con `runserver`, frontend con `vite dev`).
   histórica forzada.
 - Cualquier texto de servicio real ("Night Care", "Day Care", etc.), branding, logos,
   colores de marca.
-- URLs reales (`byfamco.vercel.app`), correos reales, nombres de las socias.
+- URLs reales de producción, correos reales, nombres de las socias.
 - Contenido real de PDFs/plantillas de contrato.
 - Todos los README actuales se reescriben desde cero en la versión genérica — no se copian
   ni resumen, porque están llenos de contexto real ("Kevin pidió", "las socias", etc.).
@@ -105,7 +107,7 @@ personales. Es el que menos lógica de negocio específica tiene — casi se tra
 solo sacando URLs hardcodeadas (pasan a variable de entorno, que además es mejor práctica).
 
 **Se revisa antes de seguir:** login, 2FA y doble verificación funcionan igual que en el
-original, sin ninguna referencia a Fam&Co.
+original, sin ninguna referencia al proyecto original.
 
 ### Fase 2 — Entidades núcleo (Cliente, Servicio, Contrato)
 
