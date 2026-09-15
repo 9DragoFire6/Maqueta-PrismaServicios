@@ -37,10 +37,16 @@ Postgres es obligatorio, no opcional, más abajo).
 # Backend
 cd backend
 python -m venv venv
-./venv/Scripts/activate        # Windows (PowerShell: venv\Scripts\Activate.ps1)
+
+# Activar el entorno virtual (la sintaxis depende de tu terminal):
+#   cmd.exe      venv\Scripts\activate.bat
+#   PowerShell   venv\Scripts\Activate.ps1
+#   Git Bash     source venv/Scripts/activate
+#   macOS/Linux  source venv/bin/activate
+
 pip install -r requirements.txt
 
-cp .env.example .env
+cp .env.example .env    # cmd.exe: copy .env.example .env
 # completar SECRET_KEY, FIELD_ENCRYPTION_KEY y credenciales de Postgres
 # (instrucciones para generar cada valor dentro del propio .env.example)
 
