@@ -9,3 +9,6 @@ django-jazzmin==3.0.5
 psycopg2-binary==2.9.13
 python-decouple==3.8
 reportlab==5.0.1
+qrcode==8.2
+Pillow==12.3.0
+cryptography==50.0.1

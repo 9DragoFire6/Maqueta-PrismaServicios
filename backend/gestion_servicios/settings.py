@@ -35,8 +35,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.postgres',
     'corsheaders',
-    # Apps propias del dominio (Cliente, Empleado, Servicio, Contrato, etc.):
-    # se van agregando aca fase a fase, empezando por 'accounts' en la Fase 1.
+    'accounts',
+    # Resto de apps propias del dominio (Cliente, Servicio, Contrato, etc.):
+    # se van agregando aca fase a fase.
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
@@ -136,7 +137,19 @@ MEDIA_ROOT = BASE_DIR / 'mediafiles'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# AUTH_USER_MODEL se define en la Fase 1 (accounts.Usuario), junto con JWT y 2FA.
+AUTH_USER_MODEL = 'accounts.Usuario'
+
+# Nombre mostrado en los correos transaccionales y en la etiqueta del 2FA.
+APP_NAME = 'Gestión de Servicios'
+
+# URL del frontend local, usada para armar links en correos (recuperar
+# contraseña, etc.). No hay dominio de produccion: todo apunta a localhost.
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
+
+# Sin proveedor de correo real conectado: los emails quedan impresos en la
+# consola donde corre runserver.
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'no-reply@gestion-servicios.local'
 
 # CORS: solo el frontend local (Vite dev server).
 CORS_ALLOWED_ORIGINS = [
@@ -157,7 +170,7 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
 }
 
-# Campos cifrados (datos personales) — Fase 1.
+# Campos cifrados (datos personales), ver accounts/models.py.
 FIELD_ENCRYPTION_KEY = config('FIELD_ENCRYPTION_KEY', default='')
 
 LOGGING = {
