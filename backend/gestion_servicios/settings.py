@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'clientes',
     'empleados',
     'finanzas',
+    'documentos',
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
@@ -142,6 +143,11 @@ AUTH_USER_MODEL = 'accounts.Usuario'
 
 # Nombre mostrado en los correos transaccionales y en la etiqueta del 2FA.
 APP_NAME = 'Gestión de Servicios'
+
+# Nombre de la empresa (entidad legal) que aparece en el PDF de contrato --
+# configurable porque es lo primero que cambia si este proyecto se reusa
+# para un negocio real. Ver documentos/utils.py:generar_pdf_contrato.
+EMPRESA_NOMBRE = config('EMPRESA_NOMBRE', default='Prisma Servicios')
 
 # URL del frontend local, usada para armar links en correos (recuperar
 # contraseña, etc.). No hay dominio de produccion: todo apunta a localhost.

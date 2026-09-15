@@ -2,6 +2,7 @@ from django.db.models.deletion import ProtectedError
 from rest_framework import viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import ValidationError
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import SAFE_METHODS
 from rest_framework.response import Response
 
@@ -96,6 +97,23 @@ class ContratoViewSet(viewsets.ModelViewSet):
             )
         eliminar_turnos_de_contrato(instance)
         instance.delete()
+
+    @action(detail=True, methods=['post'], url_path='subir-pdf-firmado', parser_classes=[MultiPartParser, FormParser])
+    def subir_pdf_firmado(self, request, pk=None):
+        from documentos.utils import nombre_archivo_contrato
+
+        contrato = self.get_object()
+        archivo = request.FILES.get('documento_pdf')
+        if not archivo:
+            return Response({'error': 'No se envio ningun archivo'}, status=400)
+        # Se ignora el nombre que traiga el archivo (el cliente pudo haberlo
+        # renombrado al firmar) y se estandariza siempre al mismo formato,
+        # para poder ordenar/identificar contratos por su nombre de archivo
+        # y para que un reemplazo pise siempre el mismo archivo.
+        archivo.name = nombre_archivo_contrato(contrato, firmado=True)
+        contrato.documento_pdf = archivo
+        contrato.save()
+        return Response(ContratoSerializer(contrato).data)
 
     @action(detail=True, methods=['post'], url_path='generar-turnos')
     def generar_turnos(self, request, pk=None):
