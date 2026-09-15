@@ -23,7 +23,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from accounts.dobleverificacion import tiene_2fa_activo, verificar_doble_factor
 from accounts.email_utils import enviar_email_credenciales, enviar_email_recuperacion
 from accounts.models import Usuario
-from accounts.permissions import EsAdmin
+from accounts.permissions import EsAdmin, EsAdminOEmpleado
 
 
 def _generar_password_temporal():
@@ -404,3 +404,66 @@ def usuario_detalle(request, usuario_id):
         'rol': usuario.rol,
         'is_active': usuario.is_active,
     })
+
+
+@api_view(['GET'])
+@permission_classes([EsAdminOEmpleado])
+def dashboard_stats(request):
+    """
+    Numeros resumen para la pantalla de inicio. Deliberadamente simple
+    (Fase 6: "completo pero simple") -- un admin ve los totales de todo el
+    negocio, un empleado ve un resumen acotado a lo suyo.
+    """
+    from django.db.models import Sum
+
+    from clientes.models import Cliente, Ingreso
+    from empleados.models import Recibo
+
+    if request.user.rol in ('admin',):
+        cobros_pendientes = Ingreso.objects.exclude(estado='pagado').aggregate(total=Sum('cobrado'))['total'] or 0
+        pagos_pendientes = Recibo.objects.filter(pago__isnull=True).aggregate(total=Sum('importe'))['total'] or 0
+        return Response({
+            'clientes_activos': Cliente.objects.filter(activa=True).count(),
+            'cobros_pendientes': float(cobros_pendientes),
+            'pagos_pendientes': float(pagos_pendientes),
+        })
+
+    mis_recibos_pendientes = Recibo.objects.filter(
+        empleado__email=request.user.email, pago__isnull=True,
+    ).aggregate(total=Sum('importe'))['total'] or 0
+    return Response({'mis_pagos_pendientes': float(mis_recibos_pendientes)})
+
+
+@api_view(['GET'])
+@permission_classes([EsAdmin])
+def dashboard_mensual(request):
+    """Facturacion/gastos/pagos de los ultimos 6 meses, para el grafico del dashboard."""
+    from datetime import date, timedelta
+
+    from django.db.models import Sum
+
+    from clientes.models import Ingreso
+    from finanzas.models import PagoEmpleado
+
+    hoy = date.today()
+    meses = []
+    for i in range(5, -1, -1):
+        primer_dia = date(hoy.year, hoy.month, 1) - timedelta(days=i * 30)
+        primer_dia = date(primer_dia.year, primer_dia.month, 1)
+        if primer_dia.month == 12:
+            ultimo_dia = date(primer_dia.year + 1, 1, 1) - timedelta(days=1)
+        else:
+            ultimo_dia = date(primer_dia.year, primer_dia.month + 1, 1) - timedelta(days=1)
+
+        facturacion = Ingreso.objects.filter(fecha__gte=primer_dia, fecha__lte=ultimo_dia).aggregate(
+            total=Sum('cobrado'))['total'] or 0
+        pagos_empleados = PagoEmpleado.objects.filter(fecha_pago__gte=primer_dia, fecha_pago__lte=ultimo_dia).aggregate(
+            total=Sum('importe'))['total'] or 0
+
+        meses.append({
+            'mes': primer_dia.strftime('%b %Y'),
+            'facturacion': float(facturacion),
+            'pagos_empleados': float(pagos_empleados),
+        })
+
+    return Response(meses)

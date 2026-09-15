@@ -6,6 +6,11 @@ from .models import Ausencia, Empleado, Recibo, SolicitudAusencia, Turno
 
 
 class ReciboSerializer(serializers.ModelSerializer):
+    # 'pago' es una relacion inversa (PagoEmpleado.recibo, OneToOne): fields
+    # = '__all__' no la incluye sola, hay que declararla para que el
+    # frontend sepa si este recibo ya tiene un pago registrado.
+    pago = serializers.PrimaryKeyRelatedField(read_only=True)
+
     class Meta:
         model = Recibo
         fields = '__all__'

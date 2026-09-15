@@ -20,4 +20,6 @@ urlpatterns = [
     path('auth/usuarios/', views.lista_usuarios, name='lista-usuarios'),
     path('auth/usuarios/<int:usuario_id>/', views.usuario_detalle, name='usuario-detalle'),
     path('auth/crear-usuario/', views.crear_usuario, name='crear-usuario'),
+    path('dashboard/stats/', views.dashboard_stats, name='dashboard-stats'),
+    path('dashboard/mensual/', views.dashboard_mensual, name='dashboard-mensual'),
 ]

@@ -63,11 +63,12 @@ class ContratoSerializer(serializers.ModelSerializer):
     acuerdos = AcuerdoServicioSerializer(many=True)
     fecha_inicio = serializers.ReadOnlyField()
     fecha_fin = serializers.ReadOnlyField()
+    cliente_nombre = serializers.CharField(source='cliente.nombre_contacto', read_only=True)
 
     class Meta:
         model = Contrato
         fields = [
-            'id', 'cliente', 'estado', 'documento_pdf', 'firmas_completas',
+            'id', 'cliente', 'cliente_nombre', 'estado', 'documento_pdf', 'firmas_completas',
             'observaciones', 'creado_en', 'fecha_inicio', 'fecha_fin', 'acuerdos',
             'motivo_anulacion', 'fecha_inicio_anulacion', 'fecha_fin_anulacion',
         ]
@@ -143,11 +144,12 @@ class ContratoPublicoSerializer(serializers.ModelSerializer):
     acuerdos = AcuerdoServicioPublicoSerializer(many=True, read_only=True)
     fecha_inicio = serializers.ReadOnlyField()
     fecha_fin = serializers.ReadOnlyField()
+    cliente_nombre = serializers.CharField(source='cliente.nombre_contacto', read_only=True)
 
     class Meta:
         model = Contrato
         fields = [
-            'id', 'cliente', 'estado', 'documento_pdf', 'firmas_completas',
+            'id', 'cliente', 'cliente_nombre', 'estado', 'documento_pdf', 'firmas_completas',
             'observaciones', 'creado_en', 'fecha_inicio', 'fecha_fin', 'acuerdos',
         ]
         read_only_fields = fields
