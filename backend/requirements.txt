@@ -1,0 +1,11 @@
+Django==6.1.1
+djangorestframework==3.18.1
+djangorestframework-simplejwt==5.5.1
+django-cors-headers==4.9.0
+django-otp==1.7.3
+django-encrypted-model-fields==0.6.5
+django-auditlog==3.4.1
+django-jazzmin==3.0.5
+psycopg2-binary==2.9.13
+python-decouple==3.8
+reportlab==5.0.1
