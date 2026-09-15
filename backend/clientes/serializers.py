@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from .models import AcuerdoServicio, Cliente, Contrato, Servicio
+from .services import eliminar_turnos_de_acuerdo, generar_turnos_de_acuerdo, podar_turnos_de_acuerdo
 
 
 class ClienteSerializer(serializers.ModelSerializer):
@@ -84,9 +85,8 @@ class ContratoSerializer(serializers.ModelSerializer):
         contrato = Contrato.objects.create(**validated_data)
         for acuerdo_data in acuerdos_data:
             acuerdo_data.pop('id', None)
-            AcuerdoServicio.objects.create(contrato=contrato, **acuerdo_data)
-            # Fase 3: generar_turnos_de_acuerdo(acuerdo) se llama aca en
-            # cuanto exista Turno.
+            acuerdo = AcuerdoServicio.objects.create(contrato=contrato, **acuerdo_data)
+            generar_turnos_de_acuerdo(acuerdo)
         return contrato
 
     def update(self, instance, validated_data):
@@ -106,9 +106,12 @@ class ContratoSerializer(serializers.ModelSerializer):
 
         if acuerdos_data is not None and estaba_en_borrador:
             ids_enviados = [a['id'] for a in acuerdos_data if a.get('id')]
-            instance.acuerdos.exclude(id__in=ids_enviados).delete()
-            # Fase 3: antes de borrar hay que eliminar los Turno ya generados
-            # de esos acuerdos (ver eliminar_turnos_de_acuerdo en el original).
+            acuerdos_a_quitar = instance.acuerdos.exclude(id__in=ids_enviados)
+            # Antes de borrar el AcuerdoServicio hay que borrar sus Turno ya
+            # generados: la FK Turno.acuerdo_servicio es SET_NULL, no CASCADE.
+            for acuerdo_a_quitar in acuerdos_a_quitar:
+                eliminar_turnos_de_acuerdo(acuerdo_a_quitar)
+            acuerdos_a_quitar.delete()
             for acuerdo_data in acuerdos_data:
                 acuerdo_id = acuerdo_data.pop('id', None)
                 acuerdo_existente = instance.acuerdos.filter(id=acuerdo_id).first() if acuerdo_id else None
@@ -117,10 +120,15 @@ class ContratoSerializer(serializers.ModelSerializer):
                     for attr, value in acuerdo_data.items():
                         setattr(acuerdo_existente, attr, value)
                     acuerdo_existente.save()
-                    # Fase 3: generar_turnos_de_acuerdo() + podar_turnos_de_acuerdo() aca.
+                    generar_turnos_de_acuerdo(acuerdo_existente)
+                    # Si el horario se achico (menos dias, menos semanas),
+                    # generar_turnos_de_acuerdo no borra los turnos que
+                    # quedaron fuera del horario nuevo -- podar_turnos_de_acuerdo
+                    # se encarga de eso.
+                    podar_turnos_de_acuerdo(acuerdo_existente)
                 else:
-                    AcuerdoServicio.objects.create(contrato=instance, **acuerdo_data)
-                    # Fase 3: generar_turnos_de_acuerdo() aca.
+                    acuerdo = AcuerdoServicio.objects.create(contrato=instance, **acuerdo_data)
+                    generar_turnos_de_acuerdo(acuerdo)
         return instance
 
 

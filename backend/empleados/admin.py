@@ -1,5 +1,15 @@
 from django.contrib import admin
 
-from .models import Empleado
+from .models import Ausencia, Empleado, SolicitudAusencia, Turno
 
-admin.site.register(Empleado)
+
+@admin.register(Empleado)
+class EmpleadoAdmin(admin.ModelAdmin):
+    list_display = ['nombre', 'apellido', 'categoria', 'especialidad', 'telefono', 'email', 'activo']
+    list_filter = ['categoria', 'activo']
+    search_fields = ['nombre', 'apellido', 'email']
+
+
+admin.site.register(Turno)
+admin.site.register(Ausencia)
+admin.site.register(SolicitudAusencia)

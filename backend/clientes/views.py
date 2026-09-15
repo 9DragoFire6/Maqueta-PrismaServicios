@@ -15,7 +15,12 @@ from .serializers import (
     ContratoSerializer,
     ServicioSerializer,
 )
-from .services import eliminar_contratos_borrador_vencidos, finalizar_contratos_vencidos
+from .services import (
+    eliminar_contratos_borrador_vencidos,
+    eliminar_turnos_de_contrato,
+    finalizar_contratos_vencidos,
+    generar_turnos_de_contrato,
+)
 
 
 class ClienteViewSet(viewsets.ModelViewSet):
@@ -87,7 +92,18 @@ class ContratoViewSet(viewsets.ModelViewSet):
                 'Un contrato activo, finalizado o anulado no se borra: usa "Anular" '
                 'si el servicio dejo de prestarse, para conservar el historial real.'
             )
+        eliminar_turnos_de_contrato(instance)
         instance.delete()
+
+    @action(detail=True, methods=['post'], url_path='generar-turnos')
+    def generar_turnos(self, request, pk=None):
+        """
+        Genera (o regenera) los Turno de cada AcuerdoServicio activo del
+        contrato. La generacion ya corre sola al crear/editar el contrato;
+        esta accion sirve para forzar una regeneracion manual. Es idempotente.
+        """
+        contrato = self.get_object()
+        return Response(generar_turnos_de_contrato(contrato))
 
     @action(detail=True, methods=['post'], url_path='anular')
     def anular(self, request, pk=None):
@@ -124,7 +140,8 @@ class ContratoViewSet(viewsets.ModelViewSet):
         contrato.fecha_inicio_anulacion = fecha_inicio_anulacion
         contrato.fecha_fin_anulacion = fecha_fin_anulacion
         contrato.save()
-        # Fase 3: eliminar_turnos_de_contrato(contrato, desde=..., hasta=...) aca.
+
+        eliminar_turnos_de_contrato(contrato, desde=fecha_inicio_anulacion, hasta=fecha_fin_anulacion)
 
         return Response(ContratoSerializer(contrato).data)
 
