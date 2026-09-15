@@ -7,11 +7,12 @@ from rest_framework.response import Response
 
 from accounts.permissions import EsAdmin, EsAdminOEmpleado, ROLES_NIVEL_ADMIN
 
-from .models import Ausencia, Empleado, SolicitudAusencia, Turno
+from .models import Ausencia, Empleado, Recibo, SolicitudAusencia, Turno
 from .serializers import (
     AusenciaSerializer,
     EmpleadoPublicoSerializer,
     EmpleadoSerializer,
+    ReciboSerializer,
     SolicitudAusenciaSerializer,
     TurnoSerializer,
 )
@@ -41,6 +42,27 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
         # ficha. Los datos sensibles quedan afuera por el serializer
         # reducido, no por el queryset.
         return Empleado.objects.filter(activo=True)
+
+    def get_permissions(self):
+        if self.request.method in SAFE_METHODS:
+            return [EsAdminOEmpleado()]
+        return [EsAdmin()]
+
+
+class ReciboViewSet(viewsets.ModelViewSet):
+    serializer_class = ReciboSerializer
+
+    def get_queryset(self):
+        # No hay scheduler/cron en este proyecto: se aprovecha cada consulta
+        # a Recibos para generar los que falten junto con sus Ingreso, por
+        # si se abre Pagos sin haber pasado antes por Ingresos.
+        from clientes.services import generar_ingresos_semana
+        generar_ingresos_semana()
+
+        user = self.request.user
+        if user.rol in ROLES_NIVEL_ADMIN:
+            return Recibo.objects.all()
+        return Recibo.objects.filter(empleado__email=user.email)
 
     def get_permissions(self):
         if self.request.method in SAFE_METHODS:
@@ -224,13 +246,21 @@ class AusenciaViewSet(viewsets.ModelViewSet):
         instance.delete()
 
     def _resolver_solicitudes_pendientes(self, ausencia):
-        # Fase 4: ademas de resolver la solicitud, desactivar la
-        # TareaRecurrente asociada (ver SolicitudAusenciaViewSet.perform_create).
+        from finanzas.models import TareaRecurrente
+
         solicitudes = SolicitudAusencia.objects.filter(ausencia=ausencia, estado='pendiente')
         for s in solicitudes:
             s.estado = 'resuelta'
             s.resuelta_en = timezone.now()
             s.save()
+            # Fragilidad conocida (igual que en el original): la tarea se
+            # localiza por texto en el titulo, no por FK. Si la misma
+            # persona tiene varias solicitudes abiertas, resolver una
+            # desactiva todas sus tareas.
+            TareaRecurrente.objects.filter(
+                titulo__contains=s.solicitante.get_full_name() or s.solicitante.username,
+                activa=True,
+            ).update(activa=False)
 
 
 class SolicitudAusenciaViewSet(viewsets.ModelViewSet):
@@ -331,7 +361,30 @@ class SolicitudAusenciaViewSet(viewsets.ModelViewSet):
         return Response(SolicitudAusenciaSerializer(solicitud).data)
 
     def perform_create(self, serializer):
-        # Fase 4: aca tambien se crea una TareaRecurrente para que la
-        # solicitud aparezca en la pantalla de Tareas de administracion
-        # hasta que se atienda (ver freelancers/views.py del original).
-        serializer.save(solicitante=self.request.user)
+        from finanzas.models import TareaRecurrente
+
+        tipo = serializer.validated_data['tipo']
+        ausencia = serializer.validated_data.get('ausencia')
+        turno = serializer.validated_data.get('turno')
+        solicitud = serializer.save(solicitante=self.request.user)
+
+        # Tarea automatica para que la solicitud aparezca en la pantalla de
+        # Tareas de administracion hasta que se atienda. 'correccion_horas'
+        # no depende de ninguna Ausencia, asi que la descripcion se arma
+        # distinto segun el caso.
+        if tipo == 'correccion_horas':
+            descripcion = f'Tipo: {tipo}. Turno del {turno.fecha}.'
+        elif tipo == 'reasignacion_extendida':
+            descripcion = (
+                f'Tipo: {tipo}. {solicitud.empleado_afectado} del '
+                f'{solicitud.fecha_inicio_reasignacion} al {solicitud.fecha_fin_reasignacion}.'
+            )
+        else:
+            descripcion = f'Tipo: {tipo}. Ausencia del {ausencia.fecha_inicio} al {ausencia.fecha_fin}.'
+
+        TareaRecurrente.objects.create(
+            titulo=f'Solicitud - Corrección de Ausencia de {self.request.user.get_full_name() or self.request.user.username}',
+            descripcion=descripcion,
+            frecuencia='diaria',
+            activa=True,
+        )

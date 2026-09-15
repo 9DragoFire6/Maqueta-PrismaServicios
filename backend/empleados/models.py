@@ -220,3 +220,35 @@ class SolicitudAusencia(models.Model):
 
     def __str__(self):
         return f"Solicitud {self.tipo} — {self.solicitante} — {self.estado}"
+
+
+class Recibo(models.Model):
+    """
+    Cuanto se le debe a un empleado por un servicio especifico prestado a un
+    cliente (tarifa empleado, no tarifa cliente). Se genera solo, junto con
+    su Ingreso correspondiente (ver clientes.services.generar_ingresos_semana)
+    -- uno por servicio/semana Y por empleado que la haya trabajado, para
+    que cada uno se pueda pagar y respaldar por separado en Pagos.
+
+    ingreso y servicio quedan en SET_NULL (no CASCADE) a proposito: si el
+    Ingreso que le dio origen se llegara a borrar, el Recibo (y su
+    PagoEmpleado con su comprobante, si ya se pago) se conservan como
+    historial real de pago al empleado.
+
+    ingreso es ForeignKey (no OneToOneField): si una semana se reparte entre
+    el titular del AcuerdoServicio y quien lo sustituyo, puede haber mas de
+    un Recibo para el mismo Ingreso.
+    """
+    empleado = models.ForeignKey(Empleado, on_delete=models.CASCADE, related_name='recibos')
+    cliente = models.ForeignKey('clientes.Cliente', on_delete=models.CASCADE)
+    servicio = models.ForeignKey('clientes.Servicio', on_delete=models.SET_NULL, null=True, blank=True)
+    ingreso = models.ForeignKey('clientes.Ingreso', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='recibos')
+    fecha = models.DateField()
+    horas = models.DecimalField(max_digits=5, decimal_places=1)
+    importe = models.DecimalField(max_digits=8, decimal_places=2)
+    concepto = models.CharField(max_length=200)
+    pagado = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.empleado} - {self.fecha}"

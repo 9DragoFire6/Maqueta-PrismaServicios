@@ -2,10 +2,18 @@ from rest_framework import serializers
 
 from accounts.permissions import ROLES_NIVEL_ADMIN
 
-from .models import Ausencia, Empleado, SolicitudAusencia, Turno
+from .models import Ausencia, Empleado, Recibo, SolicitudAusencia, Turno
+
+
+class ReciboSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Recibo
+        fields = '__all__'
 
 
 class EmpleadoSerializer(serializers.ModelSerializer):
+    recibos = ReciboSerializer(many=True, read_only=True)
+
     class Meta:
         model = Empleado
         fields = '__all__'

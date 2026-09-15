@@ -194,3 +194,98 @@ def eliminar_contratos_borrador_vencidos():
     for contrato in Contrato.objects.filter(id__in=ids_vencidos):
         eliminar_turnos_de_contrato(contrato)
         contrato.delete()
+
+
+def generar_ingresos_semana():
+    """
+    Genera los Ingreso semanales (semana anclada a lunes) que falten, uno
+    por cada AcuerdoServicio con horas reales trabajadas en esa semana. Solo
+    genera periodos ya completamente transcurridos (periodo_fin < hoy) y
+    solo si hay horas reales registradas. No hay scheduler/cron en este
+    proyecto: se corre cada vez que se consulta la lista de Ingresos o de
+    Recibos.
+
+    No filtra por acuerdo.activo a proposito: si un acuerdo se desactiva
+    justo cuando le tocaba generar su ultimo ingreso, igual se genera,
+    porque el trabajo se hizo mientras estaba activo.
+
+    Junto con cada Ingreso se genera uno o mas Recibo: lo que se le debe a
+    cada empleado que efectivamente trabajo ese servicio/semana (tarifa
+    empleado, no tarifa cliente). Normalmente es uno solo (el titular del
+    AcuerdoServicio), pero si hubo una sustitucion (ver
+    empleados.services.payee_de_turno) la semana se reparte en mas de un
+    Recibo.
+    """
+    from collections import defaultdict
+    from decimal import Decimal
+
+    from django.utils import timezone
+
+    from empleados.models import Recibo, Turno
+    from empleados.services import calcular_pago_profesional, payee_de_turno
+
+    from .models import AcuerdoServicio, Ingreso
+
+    hoy = timezone.now().date()
+
+    for acuerdo in AcuerdoServicio.objects.all():
+        fecha_inicio = acuerdo.fecha_inicio
+        fecha_fin = acuerdo.fecha_fin
+        if not fecha_inicio or not fecha_fin:
+            continue
+
+        cursor = fecha_inicio
+        while cursor <= hoy and cursor <= fecha_fin:
+            dias_hasta_domingo = 6 - cursor.weekday()  # weekday(): lunes=0 .. domingo=6
+            periodo_fin = min(cursor + timedelta(days=dias_hasta_domingo), fecha_fin)
+            if periodo_fin >= hoy:
+                break
+            periodo_inicio = cursor
+
+            existe = Ingreso.objects.filter(acuerdo_servicio=acuerdo, fecha=periodo_inicio).exists()
+            if not existe:
+                turnos = Turno.objects.filter(
+                    acuerdo_servicio=acuerdo,
+                    fecha__gte=periodo_inicio,
+                    fecha__lte=periodo_fin,
+                    horas_reales__isnull=False,
+                )
+                # Se reparte por quien efectivamente cobra cada turno (el
+                # titular, o el sustituto si corresponde). Un turno sin
+                # payee valido (categoria incompatible) queda afuera del
+                # total: ni se le cobra al cliente por el, ni se le paga a
+                # nadie.
+                horas_por_payee = defaultdict(Decimal)
+                for turno in turnos:
+                    payee = payee_de_turno(turno)
+                    if payee:
+                        horas_por_payee[payee] += turno.horas_reales
+
+                horas_totales = sum(horas_por_payee.values(), Decimal('0'))
+                if horas_totales:
+                    ingreso = Ingreso.objects.create(
+                        cliente=acuerdo.contrato.cliente,
+                        empleado=acuerdo.profesional,
+                        servicio=acuerdo.servicio,
+                        acuerdo_servicio=acuerdo,
+                        fecha=periodo_inicio,
+                        periodo_fin=periodo_fin,
+                        horas=horas_totales,
+                    )
+                    concepto = f"{ingreso.servicio.nombre} — semana del {periodo_inicio} al {periodo_fin}"
+                    for payee, horas_payee in horas_por_payee.items():
+                        if not horas_payee:
+                            continue
+                        Recibo.objects.get_or_create(
+                            ingreso=ingreso,
+                            empleado=payee,
+                            defaults={
+                                'cliente': ingreso.cliente,
+                                'servicio': ingreso.servicio,
+                                'fecha': ingreso.fecha,
+                                'horas': horas_payee,
+                                'importe': calcular_pago_profesional(acuerdo, horas_payee),
+                                'concepto': concepto,
+                            },
+                        )
+            cursor = periodo_fin + timedelta(days=1)

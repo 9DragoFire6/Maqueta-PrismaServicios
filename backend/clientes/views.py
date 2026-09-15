@@ -8,17 +8,19 @@ from rest_framework.response import Response
 from accounts.dobleverificacion import verificar_doble_factor
 from accounts.permissions import EsAdmin, EsAdminOEmpleado, ROLES_NIVEL_ADMIN
 
-from .models import AcuerdoServicio, Cliente, Contrato, Servicio
+from .models import AcuerdoServicio, Cliente, Contrato, Ingreso, Servicio
 from .serializers import (
     ClienteSerializer,
     ContratoPublicoSerializer,
     ContratoSerializer,
+    IngresoSerializer,
     ServicioSerializer,
 )
 from .services import (
     eliminar_contratos_borrador_vencidos,
     eliminar_turnos_de_contrato,
     finalizar_contratos_vencidos,
+    generar_ingresos_semana,
     generar_turnos_de_contrato,
 )
 
@@ -213,6 +215,19 @@ class ServicioViewSet(viewsets.ModelViewSet):
                 servicio.orden = posicion
                 servicio.save(update_fields=['orden'])
         return Response(ServicioSerializer(Servicio.objects.all(), many=True).data)
+
+
+class IngresoViewSet(viewsets.ModelViewSet):
+    queryset = Ingreso.objects.all()
+    serializer_class = IngresoSerializer
+    permission_classes = [EsAdmin]
+
+    def get_queryset(self):
+        # No hay scheduler/cron en este proyecto: se aprovecha cada consulta
+        # a Ingresos para generar los que falten a partir de las horas
+        # reales trabajadas.
+        generar_ingresos_semana()
+        return Ingreso.objects.all()
 
 
 @api_view(['GET'])

@@ -1,4 +1,5 @@
 from datetime import timedelta
+from decimal import Decimal
 
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
@@ -173,6 +174,70 @@ class AcuerdoServicio(models.Model):
 
     def __str__(self):
         return f"{self.contrato.cliente} - {self.servicio} - {self.profesional}"
+
+
+class Ingreso(models.Model):
+    """
+    Resumen semanal (lunes a domingo) de lo efectivamente trabajado y
+    cobrable para un AcuerdoServicio: se genera solo a partir de los Turno
+    con horas_reales registradas (ver generar_ingresos_semana en
+    services.py). fecha es el lunes de esa semana; periodo_fin el domingo
+    (o la fecha_fin del acuerdo si cae antes).
+    """
+    ESTADOS = [
+        ('pendiente', 'Pendiente'),
+        ('facturado', 'Facturado'),
+        ('pagado', 'Pagado'),
+    ]
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='ingresos')
+    empleado = models.ForeignKey('empleados.Empleado', on_delete=models.CASCADE)
+    servicio = models.ForeignKey(Servicio, on_delete=models.CASCADE)
+    acuerdo_servicio = models.ForeignKey(AcuerdoServicio, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='ingresos',
+        help_text="Acuerdo de servicio del que se genero este ingreso (vacio en ingresos cargados a mano)")
+    fecha = models.DateField(help_text="Inicio del periodo que resume este ingreso (lunes, si se genero automaticamente)")
+    periodo_fin = models.DateField(null=True, blank=True,
+        help_text="Fin del periodo que resume este ingreso (domingo). Vacio en ingresos cargados a mano")
+    horas = models.DecimalField(max_digits=6, decimal_places=1, null=True, blank=True)
+    cobrado = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    iva_porcentaje = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    iva_monto = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    base_real = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    pago_empleado = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    estado = models.CharField(max_length=15, choices=ESTADOS, default='pendiente')
+    factura = models.ForeignKey('finanzas.Factura', on_delete=models.SET_NULL,
+                                null=True, blank=True, related_name='ingresos')
+    notas = models.TextField(blank=True)
+
+    class Meta:
+        unique_together = ('acuerdo_servicio', 'fecha')
+
+    def save(self, *args, **kwargs):
+        # Todo el dinero se recalcula en cada save() a partir de `horas`.
+        # Volver a guardar un Ingreso viejo lo recalcula con las tarifas,
+        # el IVA y la compensacion ACTUALES -- ojo con hacer save() masivo
+        # sobre ingresos historicos.
+        if self.horas and self.servicio_id and self.cliente_id:
+            self.iva_porcentaje = self.cliente.iva_porcentaje
+            base = self.horas * self.servicio.tarifa_cliente
+            self.iva_monto = round(base * self.iva_porcentaje / Decimal('100'), 2)
+            self.cobrado = base + self.iva_monto
+            self.base_real = base
+
+            # Misma formula que empleados.services.calcular_pago_profesional,
+            # aplicada aca sobre el total semanal a nombre del titular del
+            # acuerdo (acuerdo.profesional) -- duplicada a proposito, igual
+            # que en el original: si esta formula cambia, hay que actualizar
+            # los dos lugares.
+            if self.servicio.compensacion_tipo == 'porcentaje_base':
+                self.pago_empleado = round(self.base_real * self.servicio.compensacion_valor / Decimal('100'), 2)
+            else:
+                self.pago_empleado = round(self.horas * self.servicio.compensacion_valor, 2)
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.cliente} - {self.servicio} - {self.fecha}"
 
 
 # Modulo de Auditoria (ver accounts/views.py). Se registran Contrato y

@@ -1,0 +1,4 @@
+cliente_nombre,empleado_nombre,servicio_codigo,fecha,horas
+TEST-Cliente Aguirre,TEST-Diego,LIMP-STD,2026-01-05,8
+TEST-Cliente Aguirre,TEST-Diego,LIMP-STD,2026-01-06,8
+TEST-Cliente Rossi,TEST-Sofia,MANT-TEC,2026-01-05,4

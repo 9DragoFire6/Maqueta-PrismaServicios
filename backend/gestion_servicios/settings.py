@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'accounts',
     'clientes',
     'empleados',
+    'finanzas',
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',

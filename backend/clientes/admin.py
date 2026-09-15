@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import AcuerdoServicio, Cliente, Contrato, Servicio
+from .models import AcuerdoServicio, Cliente, Contrato, Ingreso, Servicio
 
 
 class AcuerdoServicioInline(admin.TabularInline):
@@ -25,3 +25,9 @@ class ContratoAdmin(admin.ModelAdmin):
     list_display = ['id', 'cliente', 'estado', 'creado_en']
     list_filter = ['estado']
     inlines = [AcuerdoServicioInline]
+
+
+@admin.register(Ingreso)
+class IngresoAdmin(admin.ModelAdmin):
+    list_display = ['cliente', 'servicio', 'empleado', 'fecha', 'horas', 'cobrado', 'estado']
+    list_filter = ['estado']

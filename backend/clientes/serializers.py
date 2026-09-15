@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import AcuerdoServicio, Cliente, Contrato, Servicio
+from .models import AcuerdoServicio, Cliente, Contrato, Ingreso, Servicio
 from .services import eliminar_turnos_de_acuerdo, generar_turnos_de_acuerdo, podar_turnos_de_acuerdo
 
 
@@ -183,3 +183,10 @@ class ServicioSerializer(serializers.ModelSerializer):
                         "Este servicio está desactivado. Actívalo antes de editar otros campos."
                     )
         return data
+
+
+class IngresoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Ingreso
+        fields = '__all__'
+        read_only_fields = ['cobrado', 'iva_porcentaje', 'iva_monto', 'base_real', 'pago_empleado']

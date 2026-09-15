@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Ausencia, Empleado, SolicitudAusencia, Turno
+from .models import Ausencia, Empleado, Recibo, SolicitudAusencia, Turno
 
 
 @admin.register(Empleado)
@@ -13,3 +13,4 @@ class EmpleadoAdmin(admin.ModelAdmin):
 admin.site.register(Turno)
 admin.site.register(Ausencia)
 admin.site.register(SolicitudAusencia)
+admin.site.register(Recibo)

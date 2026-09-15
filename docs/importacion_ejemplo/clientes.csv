@@ -1,0 +1,4 @@
+nombre_contacto,nif,telefono,email,iva_porcentaje
+TEST-Cliente Aguirre,TEST100001,555-0101,aguirre@ejemplo.local,21
+TEST-Cliente Rossi,TEST100002,555-0102,rossi@ejemplo.local,21
+TEST-Cliente Bianchi,TEST100003,555-0103,bianchi@ejemplo.local,0
