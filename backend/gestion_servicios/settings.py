@@ -36,8 +36,8 @@ INSTALLED_APPS = [
     'django.contrib.postgres',
     'corsheaders',
     'accounts',
-    # Resto de apps propias del dominio (Cliente, Servicio, Contrato, etc.):
-    # se van agregando aca fase a fase.
+    'clientes',
+    'empleados',
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
