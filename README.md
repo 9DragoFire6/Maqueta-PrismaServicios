@@ -271,6 +271,4 @@ para que quede claro que fue deliberada.
 La arquitectura de este proyecto viene de un sistema en producción real, para un
 negocio de servicios con personal externo. Este repo es una generalización completa:
 mismo diseño técnico y las mismas decisiones de negocio no triviales, con el rubro,
-el branding y todo dato real reemplazados por un negocio y datos ficticios. El
-proceso de generalización, fase por fase, está documentado en
-[`PLAN_GENERALIZACION_PORTFOLIO.md`](PLAN_GENERALIZACION_PORTFOLIO.md).
+el branding y todo dato real reemplazados por un negocio y datos ficticios.
