@@ -47,10 +47,24 @@ python -m venv venv
 pip install -r requirements.txt
 
 cp .env.example .env    # cmd.exe: copy .env.example .env
-# completar SECRET_KEY, FIELD_ENCRYPTION_KEY y credenciales de Postgres
-# (instrucciones para generar cada valor dentro del propio .env.example)
+# El .env.example trae los NOMBRES de las variables, pero SECRET_KEY y
+# FIELD_ENCRYPTION_KEY quedan VACÍOS a propósito (son secretos, nunca se
+# versionan) -- el siguiente paso, generarlos, no es opcional.
 
-# crear la base de datos vacía en Postgres (nombre según DB_NAME en .env), luego:
+# Generá cada uno con estos comandos (misma terminal, entorno virtual activado):
+python -c "import secrets; print(secrets.token_urlsafe(50))"
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# Cada comando imprime un valor distinto. Abrí backend/.env con un editor de
+# texto (el Bloc de notas sirve, o un editor de código como VS Code) y pegá
+# cada valor en su variable: el primer comando va en SECRET_KEY, el segundo
+# en FIELD_ENCRYPTION_KEY. Una sola línea cada uno, sin comillas.
+
+# También completá DB_USER/DB_PASSWORD/DB_NAME en backend/.env con los datos
+# de tu Postgres local.
+
+# IMPORTANTE: para este paso necesitás PostgreSQL ya instalado y corriendo
+# en tu máquina, con la base de datos (DB_NAME) ya creada -- migrate crea las
+# tablas, pero no crea el servidor de Postgres ni la base en sí.
 python manage.py migrate
 python manage.py createsuperuser
 python manage.py importar_csv    # carga clientes/ingresos de ejemplo (ver docs/importacion_ejemplo/)
