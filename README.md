@@ -7,10 +7,6 @@ la arquitectura de un sistema real en producción, generalizada para portfolio �
 mismos modelos, misma lógica de negocio, mismas decisiones de seguridad, solo que sin
 el rubro, el branding ni los datos del negocio del que salió.
 
-> Ver [`PLAN_GENERALIZACION_PORTFOLIO.md`](PLAN_GENERALIZACION_PORTFOLIO.md) para el
-> detalle fase por fase de qué se generalizó y por qué; este README es el resumen para
-> quien solo quiere entender el proyecto.
-
 ## Qué resuelve
 
 Una empresa que vende servicios programados necesita, como mínimo:
